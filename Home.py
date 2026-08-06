@@ -38,7 +38,7 @@ def render_home() -> None:
         home_page_link(
             icon="🔗",
             title="Linktree",
-            subtitle="Acesso fácil a links úteis relacionados",
+            subtitle="Acesso fácil a links úteis relacionados.",
             page="linktree",
         )
 

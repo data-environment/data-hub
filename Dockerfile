@@ -14,6 +14,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-install-project
 
 COPY Home.py ./
+COPY components/ components/
 COPY wiki/ wiki/
 COPY smartcheck/ smartcheck/
 COPY smartdata/ smartdata/

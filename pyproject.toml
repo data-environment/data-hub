@@ -1,0 +1,12 @@
+[project]
+name = "data-hub"
+version = "0.1.0"
+description = "Documentação automática dos DataContracts em Streamlit"
+requires-python = ">=3.12"
+dependencies = [
+    "data-contracts",
+    "streamlit>=1.61.1",
+]
+
+[tool.uv.sources]
+data-contracts = { git = "https://github.com/data-environment/data-contracts.git", rev = "feature/add-initial-model-and-definitions" }

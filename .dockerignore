@@ -1,0 +1,8 @@
+.venv
+.venv_inspect
+__pycache__
+*.pyc
+.git
+.gitignore
+README.md
+.streamlit/secrets.toml

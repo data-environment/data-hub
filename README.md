@@ -10,7 +10,7 @@ Requer [uv](https://docs.astral.sh/uv/) e Python 3.12+ (a versão é fixada em `
 
 ```bash
 uv sync
-uv run streamlit run wiki/screen.py
+uv run streamlit run Home.py
 ```
 
 Acesse http://localhost:8501.

@@ -1,15 +1,11 @@
-"""App Streamlit que documenta automaticamente os DataContracts do data-contracts.
-
-Rodar com: streamlit run screen.py
-"""
-
 from __future__ import annotations
 
 from typing import Any
 
-import registry
 import streamlit as st
-from engine import ContractDoc, SchemaField, build_doc
+
+from wiki import registry
+from wiki.engine import ContractDoc, SchemaField, build_doc
 
 STATUS_ICON = {"Active": "🟢", "Inactive": "⚪"}
 
@@ -185,8 +181,6 @@ def render_contract(doc: ContractDoc) -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Data Hub · Contratos de Dados", layout="wide")
-
     contracts = registry.list_contracts()
     if not contracts:
         st.warning(

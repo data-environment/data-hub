@@ -13,11 +13,15 @@ ENV UV_COMPILE_BYTECODE=1 \
 COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-install-project
 
+COPY Home.py ./
 COPY wiki/ wiki/
+COPY smartcheck/ smartcheck/
+COPY smartdata/ smartdata/
+COPY linktree/ linktree/
 RUN uv sync --locked
 
 EXPOSE 8501
 
 HEALTHCHECK CMD uv run python -c "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')" || exit 1
 
-CMD ["uv", "run", "streamlit", "run", "wiki/screen.py", "--server.address=0.0.0.0", "--server.port=8501"]
+CMD ["uv", "run", "streamlit", "run", "Home.py", "--server.address=0.0.0.0", "--server.port=8501"]

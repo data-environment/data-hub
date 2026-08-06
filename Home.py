@@ -48,9 +48,7 @@ st.set_page_config(page_title="Data Hub", layout="wide")
 home_page = st.Page(
     render_home, title="Início", icon="🏠", url_path="home", default=True
 )
-wiki_page = st.Page(
-    "wiki/screen.py", title="Wiki de Contratos", icon="📚", url_path="wiki"
-)
+wiki_page = st.Page("wiki/screen.py", title="Wiki", icon="📚", url_path="wiki")
 smartcheck_page = st.Page(
     "smartcheck/screen.py", title="SmartCheck", icon="✅", url_path="smartcheck"
 )

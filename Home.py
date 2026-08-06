@@ -30,7 +30,7 @@ def render_home() -> None:
         home_page_link(
             icon="🗃️",
             title="SmartData",
-            subtitle="Em construção.",
+            subtitle="Consulte o banco de dados.",
             page="smartdata",
         )
 
@@ -38,7 +38,7 @@ def render_home() -> None:
         home_page_link(
             icon="🔗",
             title="Linktree",
-            subtitle="Em construção.",
+            subtitle="Acesso fácil a links úteis relacionados",
             page="linktree",
         )
 

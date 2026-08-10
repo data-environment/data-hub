@@ -1,9 +1,3 @@
-"""Converte um DataContract em uma estrutura de documentação pronta para exibição.
-
-Não depende do Streamlit — a saída é feita só de tipos simples (dict/list/str)
-para poder ser testada ou renderizada em qualquer front-end.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, fields, is_dataclass
@@ -72,7 +66,9 @@ def _schema_fields(contract: DataContract) -> list[SchemaField]:
 
     result = []
     for name, info in model.model_fields.items():
-        extra = info.json_schema_extra if isinstance(info.json_schema_extra, dict) else {}
+        extra = (
+            info.json_schema_extra if isinstance(info.json_schema_extra, dict) else {}
+        )
         result.append(
             SchemaField(
                 name=name,

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote, unquote
 
 import streamlit as st
 
-from wiki import registry
+from components.home_page_link import home_page_link
+from wiki import contexts, registry
+from wiki.contexts import ContextNode
 from wiki.engine import ContractDoc, SchemaField, build_doc
 
 STATUS_ICON = {"Active": "🟢", "Inactive": "⚪"}
@@ -180,34 +183,62 @@ def render_contract(doc: ContractDoc) -> None:
         render_list_table(doc.business_rules.get("rules", []))
 
 
+def render_breadcrumb(path: list[str]) -> None:
+    crumbs = ["🏠 Wiki"] + path
+    links = [
+        f'<a href="?ctx={quote("/".join(path[:i]))}" target="_self">{label}</a>'
+        for i, label in enumerate(crumbs[:-1])
+    ]
+    st.markdown(
+        " › ".join([*links, crumbs[-1]]),
+        unsafe_allow_html=True,
+    )
+
+
+def render_context_grid(
+    node: dict[str, ContextNode], path: list[str], by_name: dict
+) -> None:
+    render_breadcrumb(path)
+    st.divider()
+
+    children = sorted(node.items())
+    cols = st.columns(3)
+    for i, (label, child) in enumerate(children):
+        href = "?ctx=" + quote("/".join([*path, label]))
+        if isinstance(child, dict):
+            icon = "📁"
+            subtitle = f"{contexts.count_leaves(child)} contrato(s)"
+        else:
+            contract = by_name.get(child)
+            icon = "📄"
+            subtitle = (
+                contract.general.description or contract.general.display_name
+                if contract
+                else "Contrato não encontrado"
+            )
+        with cols[i % 3]:
+            home_page_link(icon=icon, title=label, subtitle=subtitle, page=href)
+
+
 def main() -> None:
     contracts = registry.list_contracts()
-    if not contracts:
-        st.warning(
-            "Nenhum DataContract encontrado em data_contracts.definitions.registry."
-        )
-        return
 
-    with st.sidebar:
-        st.header("Contratos de Dados")
-        tags = registry.all_tags()
-        selected_tags = st.multiselect("Filtrar por tag", tags)
-        filtered = [
-            c
-            for c in contracts
-            if not selected_tags or set(c.general.tags or []) & set(selected_tags)
-        ]
-        options = [c.general.system_name for c in filtered] or [
-            c.general.system_name for c in contracts
-        ]
-        selected = st.radio(
-            "Contrato",
-            options,
-            format_func=lambda name: registry.get_contract(name).general.display_name,
-        )
+    by_name = {c.general.system_name: c for c in contracts}
 
-    doc = build_doc(registry.get_contract(selected))
-    render_contract(doc)
+    root: dict[str, ContextNode] = {**contexts.CONTEXT_TREE}
+
+    raw_ctx = st.query_params.get("ctx", "")
+    path = [unquote(p) for p in raw_ctx.split("/") if p]
+
+    node = contexts.resolve(root, path)
+
+    if isinstance(node, str):
+        contract = by_name.get(node)
+        render_breadcrumb(path)
+        st.divider()
+        render_contract(build_doc(contract))
+    else:
+        render_context_grid(node, path, by_name)
 
 
 main()

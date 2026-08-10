@@ -1,9 +1,3 @@
-"""Descobre e indexa todos os DataContracts publicados em data_contracts.
-
-Lê `data_contracts.definitions.registry` dinamicamente, então qualquer novo
-contrato adicionado lá aparece aqui sem precisar tocar neste arquivo.
-"""
-
 from __future__ import annotations
 
 from data_contracts.definitions import registry as _registry

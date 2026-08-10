@@ -6,7 +6,7 @@ from urllib.parse import quote, unquote
 import streamlit as st
 
 from components.home_page_link import home_page_link
-from wiki import contexts, registry
+from wiki import contexts, docs, nav, registry
 from wiki.contexts import ContextNode
 from wiki.engine import ContractDoc, SchemaField, build_doc
 
@@ -207,15 +207,20 @@ def render_context_grid(
         href = "?ctx=" + quote("/".join([*path, label]))
         if isinstance(child, dict):
             icon = "📁"
-            subtitle = f"{contexts.count_leaves(child)} contrato(s)"
+            subtitle = f"{contexts.count_leaves(child)} item(s)"
         else:
-            contract = by_name.get(child)
-            icon = "📄"
-            subtitle = (
-                contract.general.description or contract.general.display_name
-                if contract
-                else "Contrato não encontrado"
-            )
+            leaf = nav.resolve_leaf(child, [*path, label])
+            if isinstance(leaf, nav.DocLeaf):
+                icon = "📖"
+                subtitle = "Documentação"
+            else:
+                contract = by_name.get(leaf.system_name)
+                icon = "📄"
+                subtitle = (
+                    contract.general.description or contract.general.display_name
+                    if contract
+                    else "Contrato não encontrado"
+                )
         with cols[i % 3]:
             home_page_link(icon=icon, title=label, subtitle=subtitle, page=href)
 
@@ -225,7 +230,7 @@ def main() -> None:
 
     by_name = {c.general.system_name: c for c in contracts}
 
-    root: dict[str, ContextNode] = {**contexts.CONTEXT_TREE}
+    root: dict[str, ContextNode] = {**nav.NAV_TREE}
 
     raw_ctx = st.query_params.get("ctx", "")
     path = [unquote(p) for p in raw_ctx.split("/") if p]
@@ -233,10 +238,22 @@ def main() -> None:
     node = contexts.resolve(root, path)
 
     if isinstance(node, str):
-        contract = by_name.get(node)
+        leaf = nav.resolve_leaf(node, path)
         render_breadcrumb(path)
         st.divider()
-        render_contract(build_doc(contract))
+        if isinstance(leaf, nav.DocLeaf):
+            content = docs.read_doc(leaf.doc_path)
+            if content is None:
+                st.error("Documentação não encontrada.")
+            else:
+                st.title(path[-1])
+                st.markdown(content)
+        else:
+            contract = by_name.get(leaf.system_name)
+            if contract is None:
+                st.error("Contrato não encontrado.")
+            else:
+                render_contract(build_doc(contract))
     else:
         render_context_grid(node, path, by_name)
 

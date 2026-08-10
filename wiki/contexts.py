@@ -4,17 +4,6 @@ from collections.abc import Iterator
 
 type ContextNode = dict[str, "ContextNode"] | str
 
-CONTEXT_TREE: dict[str, ContextNode] = {
-    "XP": {
-        "Positivador": "xp_positivador",
-    },
-    "Parceiros": {
-        "Avenue": {
-            "Avenue FX": "avenue_fx",
-        },
-    },
-}
-
 
 def resolve(node: ContextNode, path: list[str]) -> ContextNode | None:
     for segment in path:

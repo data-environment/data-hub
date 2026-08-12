@@ -2,25 +2,32 @@ from __future__ import annotations
 
 from datetime import date
 from typing import Any
+from urllib.parse import quote
 
 import streamlit as st
 from data_contracts.model import CSV, DataContract
 from data_contracts.model.data_ingestion.data_ingestion import SmartCheck
 
+from components.home_page_link import home_page_link
 from smartcheck import s3_upload, validation
 from smartcheck.registry import SMARTCHECK_CONTEXT
 
 
-def select_contract() -> DataContract | None:
-    context = st.selectbox("Contexto", sorted(SMARTCHECK_CONTEXT))
+def render_context_grid() -> None:
+    st.title("✅ SmartCheck")
 
-    contracts = SMARTCHECK_CONTEXT[context]
-    if not contracts:
-        st.info("Nenhum contrato disponível para este contexto ainda.")
-        return None
-
-    contract_name = st.selectbox("Contrato", sorted(contracts))
-    return contracts[contract_name]
+    cols = st.columns(3)
+    for i, (context, contracts) in enumerate(sorted(SMARTCHECK_CONTEXT.items())):
+        subtitle = (
+            f"{len(contracts)} contrato(s)" if contracts else "Nenhum contrato ainda"
+        )
+        with cols[i % 3]:
+            home_page_link(
+                icon="",
+                title=context.upper(),
+                subtitle=subtitle,
+                page=f"?ctx={quote(context)}",
+            )
 
 
 def render_result(contract: DataContract, result: dict[str, Any]) -> None:
@@ -121,13 +128,34 @@ def render_upload_form(contract: DataContract) -> None:
         render_result(contract, result)
 
 
-def main() -> None:
-    st.title("SmartCheck")
-    st.caption("Validação de arquivos recebidos contra o contrato de dados.")
+def render_context_page(context: str) -> None:
+    contracts = SMARTCHECK_CONTEXT.get(context)
 
-    contract = select_contract()
-    if contract is not None:
-        render_upload_form(contract)
+    st.title(context.upper())
+
+    if not contracts:
+        st.info("Nenhum contrato disponível para este contexto ainda.")
+        return
+
+    contract_name = st.selectbox(
+        "Contrato",
+        sorted(contracts),
+        index=None,
+        placeholder="Selecione um contrato...",
+    )
+    if contract_name is None:
+        return
+
+    render_upload_form(contracts[contract_name])
+
+
+def main() -> None:
+    context = st.query_params.get("ctx")
+
+    if context:
+        render_context_page(context)
+    else:
+        render_context_grid()
 
 
 main()

@@ -6,28 +6,10 @@ from urllib.parse import quote
 
 import streamlit as st
 from data_contracts.model import CSV, DataContract
-from data_contracts.model.data_ingestion.data_ingestion import SmartCheck
 
 from components.home_page_link import home_page_link
 from smartcheck import s3_upload, validation
 from smartcheck.registry import SMARTCHECK_CONTEXT
-
-
-def render_context_grid() -> None:
-    st.title("✅ SmartCheck")
-
-    cols = st.columns(3)
-    for i, (context, contracts) in enumerate(sorted(SMARTCHECK_CONTEXT.items())):
-        subtitle = (
-            f"{len(contracts)} contrato(s)" if contracts else "Nenhum contrato ainda"
-        )
-        with cols[i % 3]:
-            home_page_link(
-                icon="",
-                title=context.upper(),
-                subtitle=subtitle,
-                page=f"?ctx={quote(context)}",
-            )
 
 
 def render_result(contract: DataContract, result: dict[str, Any]) -> None:
@@ -79,20 +61,14 @@ def render_result(contract: DataContract, result: dict[str, Any]) -> None:
 
 def render_upload_form(contract: DataContract) -> None:
     inserter = contract.data_ingestion.s3_ingestion.inserter
-    if not isinstance(inserter, SmartCheck):
-        st.warning(
-            "Este contrato não está configurado para validação via SmartCheck "
-            "(o inserter não é do tipo SmartCheck)."
-        )
-        return
-
     file_format = inserter.expected_file_format
+    system_name = contract.general.system_name
+
     st.caption(
         f"Formato esperado: `{file_format.type}` · "
         f"[Modelo de referência]({inserter.model_link})"
     )
 
-    system_name = contract.general.system_name
     accepted_types = ["csv"] if isinstance(file_format, CSV) else ["xlsx"]
     uploaded_file = st.file_uploader(
         "Arquivo", type=accepted_types, key=f"file_{system_name}"
@@ -129,9 +105,9 @@ def render_upload_form(contract: DataContract) -> None:
 
 
 def render_context_page(context: str) -> None:
-    contracts = SMARTCHECK_CONTEXT.get(context)
-
     st.title(context.upper())
+
+    contracts = SMARTCHECK_CONTEXT.get(context)
 
     if not contracts:
         st.info("Nenhum contrato disponível para este contexto ainda.")
@@ -143,10 +119,28 @@ def render_context_page(context: str) -> None:
         index=None,
         placeholder="Selecione um contrato...",
     )
+
     if contract_name is None:
         return
 
     render_upload_form(contracts[contract_name])
+
+
+def render_context_grid() -> None:
+    st.title("✅ SmartCheck")
+
+    cols = st.columns(3)
+    for i, (context, contracts) in enumerate(sorted(SMARTCHECK_CONTEXT.items())):
+        subtitle = (
+            f"{len(contracts)} contrato(s)" if contracts else "Nenhum contrato ainda"
+        )
+        with cols[i % 3]:
+            home_page_link(
+                icon="",
+                title=context.upper(),
+                subtitle=subtitle,
+                page=f"?ctx={quote(context)}",
+            )
 
 
 def main() -> None:

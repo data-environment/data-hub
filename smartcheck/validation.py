@@ -5,11 +5,10 @@ from io import BytesIO
 from typing import Any
 
 import pandas as pd
-from pydantic import BaseModel, ValidationError
-
 from data_contracts.model import CSV
-from data_contracts.model.data_ingestion.file_format import FileFormat, XLSX
+from data_contracts.model.data_ingestion.file_format import XLSX, FileFormat
 from data_contracts.model.data_quality.data_quality import check_no_duplicates
+from pydantic import BaseModel, ValidationError
 
 
 class FileReadError(Exception):
@@ -42,9 +41,11 @@ def read_uploaded_file(uploaded_file, file_format: FileFormat) -> pd.DataFrame:
                 header=0 if file_format.header else None,
                 quotechar=file_format.quote_char,
                 escapechar=file_format.escape_char,
-                na_values=[file_format.null_value]
-                if file_format.null_value is not None
-                else None,
+                na_values=(
+                    [file_format.null_value]
+                    if file_format.null_value is not None
+                    else None
+                ),
                 keep_default_na=False,
                 dtype=str,
             )

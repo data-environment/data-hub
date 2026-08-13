@@ -80,17 +80,24 @@ def render_upload_form(contract: DataContract) -> None:
     result_key = f"smartcheck_result_{system_name}"
 
     if st.button("Validar", type="primary", disabled=uploaded_file is None):
-        try:
-            df = validation.read_uploaded_file(uploaded_file, file_format)
-        except validation.FileReadError as exc:
-            st.session_state[result_key] = {"file_error": str(exc)}
-        else:
-            records, schema_errors = validation.validate_schema(
-                df, contract.schema.model
-            )
-            quality_errors, unknown_checks = validation.run_data_quality_checks(
-                records, contract.data_quality.checks
-            )
+        with st.spinner("Validando o tipo do arquivo..."):
+            try:
+                df = validation.read_uploaded_file(uploaded_file, file_format)
+            except validation.FileReadError as exc:
+                st.session_state[result_key] = {"file_error": str(exc)}
+                df = None
+
+        if df is not None:
+            with st.spinner("Validando a estrutura dos dados..."):
+                records, schema_errors = validation.validate_schema(
+                    df, contract.schema.model
+                )
+
+            with st.spinner("Aplicando os checks de qualidade..."):
+                quality_errors, unknown_checks = validation.run_data_quality_checks(
+                    records, contract.data_quality.checks
+                )
+
             st.session_state[result_key] = {
                 "schema_errors": schema_errors,
                 "quality_errors": quality_errors,

@@ -30,11 +30,13 @@ def render_result(contract: DataContract, result: dict[str, Any]) -> None:
         st.dataframe(
             [
                 {"Linha": e.linha, "Campo": e.campo, "Erro": e.mensagem}
-                for e in schema_errors
+                for e in schema_errors[:10]
             ],
             hide_index=True,
             width="stretch",
         )
+        if len(schema_errors) > 10:
+            st.caption(f"Exibindo os 10 primeiros de {len(schema_errors)} erros.")
         return
 
     quality_errors = result["quality_errors"]

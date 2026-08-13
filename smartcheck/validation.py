@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 from io import BytesIO
-from typing import Any
+from typing import Any, get_args
 
 import pandas as pd
 from data_contracts.model import CSV
 from data_contracts.model.data_ingestion.file_format import XLSX, FileFormat
 from data_contracts.model.data_quality.data_quality import check_no_duplicates
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, TypeAdapter, ValidationError
 
 
 class FileReadError(Exception):
@@ -64,26 +65,54 @@ def read_uploaded_file(uploaded_file, file_format: FileFormat) -> pd.DataFrame:
     raise FileReadError(f"Formato de arquivo não suportado: {file_format.type}")
 
 
+def _decimal_aliases(model: type[BaseModel]) -> list[str]:
+    aliases = []
+    for name, field in model.model_fields.items():
+        if field.annotation is Decimal or Decimal in get_args(field.annotation):
+            aliases.append(field.alias or name)
+    return aliases
+
+
+def _normalize_brazilian_decimals(
+    rows: list[dict[str, Any]], model: type[BaseModel]
+) -> None:
+    """Converte valores decimais no formato BR ("1.234,56") para o formato
+    aceito por `decimal.Decimal` ("1234.56"), e células vazias ("") para
+    `None`, só nas colunas tipadas como `Decimal` no schema — os arquivos de
+    origem usam vírgula como separador decimal e string vazia para ausência
+    de valor, e o Python `Decimal` não entende nenhum dos dois."""
+    for alias in _decimal_aliases(model):
+        for row in rows:
+            value = row.get(alias)
+            if isinstance(value, str):
+                if value == "":
+                    row[alias] = None
+                elif "," in value:
+                    row[alias] = value.replace(".", "").replace(",", ".")
+
+
 def validate_schema(
     df: pd.DataFrame, model: type[BaseModel]
 ) -> tuple[list[dict[str, Any]], list[SchemaError]]:
-    """Valida cada linha do arquivo (indexada pelos aliases do schema) contra o
-    modelo pydantic do contrato. Retorna os registros já convertidos para nome
-    de campo (não alias) e a lista de erros, um por (linha, campo)."""
-    records: list[dict[str, Any]] = []
-    errors: list[SchemaError] = []
-    for i, row in enumerate(df.to_dict(orient="records")):
-        try:
-            parsed = model.model_validate(row)
-        except ValidationError as exc:
-            for error in exc.errors():
-                campo = ".".join(str(loc) for loc in error["loc"]) or "-"
-                errors.append(
-                    SchemaError(linha=i + 2, campo=campo, mensagem=error["msg"])
-                )
-        else:
-            records.append(parsed.model_dump())
-    return records, errors
+    """Valida o arquivo inteiro (indexado pelos aliases do schema) contra o
+    modelo pydantic do contrato numa única passada. Retorna os registros já
+    convertidos para nome de campo (não alias) e a lista de erros, um por
+    (linha, campo). Se qualquer linha falhar, nenhum registro é retornado —
+    só a lista de erros."""
+    rows = df.to_dict(orient="records")
+    _normalize_brazilian_decimals(rows, model)
+    try:
+        parsed = TypeAdapter(list[model]).validate_python(rows)
+    except ValidationError as exc:
+        errors = []
+        for error in exc.errors():
+            linha, *resto = error["loc"]
+            campo = ".".join(str(loc) for loc in resto) or "-"
+            errors.append(
+                SchemaError(linha=linha + 2, campo=campo, mensagem=error["msg"])
+            )
+        return [], errors
+    return [record.model_dump() for record in parsed], []
 
 
 def run_data_quality_checks(

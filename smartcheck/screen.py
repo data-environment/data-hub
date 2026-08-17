@@ -5,7 +5,7 @@ from typing import Any
 from urllib.parse import quote
 
 import streamlit as st
-from data_contracts.model import CSV, DataContract
+from data_contracts.model import CSV, DataContract, DataQualityCheckFailed
 
 from components.home_page_link import home_page_link
 from smartcheck import s3_upload, validation
@@ -16,13 +16,6 @@ def render_result(contract: DataContract, result: dict[str, Any]) -> None:
     if result.get("file_error"):
         st.error(result["file_error"])
         return
-
-    unknown_checks = result["unknown_checks"]
-    if unknown_checks:
-        st.warning(
-            "Checks de qualidade sem implementação, não foram executados: "
-            + ", ".join(unknown_checks)
-        )
 
     schema_errors = result["schema_errors"]
     if schema_errors:
@@ -39,15 +32,17 @@ def render_result(contract: DataContract, result: dict[str, Any]) -> None:
             st.caption(f"Exibindo os 10 primeiros de {len(schema_errors)} erros.")
         return
 
-    quality_errors = result["quality_errors"]
-    if quality_errors:
-        st.error(f"{len(quality_errors)} erro(s) de qualidade encontrado(s).")
-        st.dataframe(
-            [{"Check": e.check, "Erro": e.mensagem} for e in quality_errors],
-            hide_index=True,
-            width="stretch",
-        )
+    quality_error = result["quality_error"]
+    if quality_error:
+        st.error(f"Check de qualidade bloqueante falhou: {quality_error}")
         return
+
+    quality_warnings = result["quality_warnings"]
+    if quality_warnings:
+        st.warning(
+            "Check(s) de qualidade não-bloqueante(s) falharam:\n"
+            + "\n".join(f"- {r.rule.description}" for r in quality_warnings)
+        )
 
     st.success("Arquivo validado com sucesso.")
     if st.button("Enviar para o S3"):
@@ -95,15 +90,21 @@ def render_upload_form(contract: DataContract) -> None:
                     df, contract.schema.model
                 )
 
-            with st.spinner("Aplicando os checks de qualidade..."):
-                quality_errors, unknown_checks = validation.run_data_quality_checks(
-                    records, contract.data_quality.checks
-                )
+            quality_results: list = []
+            quality_error = None
+            if not schema_errors:
+                with st.spinner("Aplicando os checks de qualidade..."):
+                    try:
+                        quality_results = validation.run_data_quality_checks(
+                            records, contract.data_quality
+                        )
+                    except DataQualityCheckFailed as exc:
+                        quality_error = exc.rule.description
 
             st.session_state[result_key] = {
                 "schema_errors": schema_errors,
-                "quality_errors": quality_errors,
-                "unknown_checks": unknown_checks,
+                "quality_error": quality_error,
+                "quality_warnings": [r for r in quality_results if not r.passed],
                 "file_bytes": uploaded_file.getvalue(),
                 "reference_date": reference_date,
             }

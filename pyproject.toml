@@ -13,5 +13,5 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-data-contracts = { git = "https://github.com/data-environment/data-contracts.git", rev = "feature/add-initial-model-and-definitions" }
+data-contracts = { git = "https://github.com/data-environment/data-contracts.git", rev = "feat/improve_checks" }
 data-docs = { git = "https://github.com/data-environment/data-docs.git", tag = "v0.0.3" }
